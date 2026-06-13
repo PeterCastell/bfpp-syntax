@@ -1,0 +1,53 @@
+{
+  "name": "bfpp-syntax",
+  "version": "0.1.0",
+  "description": "Syntax highlighting for the Brainfuck++ (.bfpp) language.",
+  "license": "ISC",
+  "author": "King_Awesome_",
+  "type": "commonjs",
+  "main": "./extension.js",
+  "scripts": {},
+  "dependencies": {
+    "highlight.js": "^11.11.1",
+    "vscode-languageclient": "^9.0.0"
+  },
+  "engines": {
+    "vscode": "^1.74.0"
+  },
+  "displayName": "Brainfuck++ (.bfpp)",
+  "publisher": "king-awesome",
+  "categories": [
+    "Programming Languages"
+  ],
+  "icon": "icon.png",
+  "contributes": {
+    "languages": [
+      {
+        "id": "bfpp",
+        "aliases": [
+          "Brainfuck++",
+          "bfpp"
+        ],
+        "extensions": [
+          ".bfpp"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "bfpp",
+        "scopeName": "source.bfpp",
+        "path": "./syntaxes/bfpp.tmLanguage.json"
+      }
+    ],
+    "markdown.markdownItPlugins": true,
+    "markdown.previewStyles": [
+      "./bfpp-theme.css"
+    ]
+  },
+  "activationEvents": [
+    "onLanguage:bfpp",
+    "onLanguage:markdown"
+  ]
+}

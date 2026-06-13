@@ -1,0 +1,392 @@
+{
+	"$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+	"name": "Brainfuck++",
+	"scopeName": "source.bfpp",
+	"fileTypes": [
+		"bfpp"
+	],
+	"patterns": [
+		{
+			"include": "#comments"
+		},
+		{
+			"include": "#debug"
+		},
+		{
+			"include": "#extern-operators"
+		},
+		{
+			"include": "#threading-operators"
+		},
+		{
+			"include": "#macros"
+		},
+		{
+			"include": "#for-loop"
+		},
+		{
+			"include": "#bf-control"
+		},
+		{
+			"include": "#bf-ops"
+		},
+		{
+			"include": "#strings"
+		},
+		{
+			"include": "#references"
+		},
+		{
+			"include": "#wait"
+		}
+	],
+	"repository": {
+		"comments": {
+			"match": "#.*?(\\\\#|$)",
+			"name": "comment.line.bfpp"
+		},
+		"strings": {
+			"patterns": [
+				{
+					"begin": "\"",
+					"end": "\"|\\n",
+					"name": "string.quoted.double.bfpp",
+					"patterns": [
+						{
+							"match": "\\\\.",
+							"name": "constant.character.escape.bfpp"
+						}
+					]
+				},
+				{
+					"match": "('(?:(\\\\.)|[^\\\\])')",
+					"captures": {
+						"1": { "name": "string.quoted.single.bfpp" },
+						"2": { "name": "constant.character.escape.bfpp" }
+					}
+				}
+			]
+		},
+		"debug": {
+			"patterns": [
+				{
+					"comment": "@.  →  print cursor position and current cell value",
+					"match": "(@\\.)\\s*([0-9]*)",
+					"captures": {
+						"1": {
+							"name": "keyword.control.debug.bfpp"
+						},
+						"2": {
+							"name": "constant.numeric.bfpp"
+						}
+					}
+				},
+				{
+					"comment": "@$-2, @$2, @$ → relative position assert",
+					"match": "(@\\$)\\s*(-?[0-9]+)",
+					"captures": {
+						"1": {
+							"name": "keyword.control.debug.bfpp"
+						},
+						"2": {
+							"name": "constant.numeric.bfpp"
+						}
+					}
+				},
+				{
+					"comment": "@<n>  →  assert cursor at position",
+					"match": "(@)\\s*(-?[0-9]+)",
+					"captures": {
+						"1": {
+							"name": "keyword.control.debug.bfpp"
+						},
+						"2": {
+							"name": "constant.numeric.bfpp"
+						}
+					}
+				},
+				{
+					"comment": "@\"msg\"  →  debug print",
+					"match": "(@)(\".*?(?<!\\\\)\")",
+					"captures": {
+						"1": {
+							"name": "keyword.control.debug.bfpp"
+						},
+						"2": {
+							"name": "string.quoted.double.bfpp"
+						}
+					}
+				},
+				{
+					"comment": "@!  →  debug quit",
+					"match": "@!",
+					"name": "keyword.control.debug.bfpp"
+				}
+			]
+		},
+		"extern-operators": {
+			"comment": "%*, %$, %& → extern function operators",
+			"match": "%[*$&]",
+			"name": "entity.name.type.extern.bfpp"
+		},
+		"threading-operators": {
+			"patterns": [
+				{
+					"comment": "spawn thread",
+					"match": "(\\^\\$)\\s*([a-zA-Z_][a-zA-Z0-9_]*)",
+					"captures": {
+						"1": {
+							"name": "entity.name.type.threaded.bfpp"
+						},
+						"2": {
+							"name": "entity.name.function.macro.bfpp"
+						}
+					}
+				},
+				{
+					"comment": "join thread",
+					"match": "(\\^\\!)",
+					"name": "entity.name.type.threaded.bfpp"
+				},
+				{
+					"comment": "define mutex",
+					"match": "(\\^\\&)\\s*([a-zA-Z_][a-zA-Z0-9_]*)",
+					"captures": {
+						"1": {
+							"name": "entity.name.type.threaded.bfpp"
+						},
+						"2": {
+							"name": "entity.name.function.macro.bfpp"
+						}
+					}
+				},
+				{
+					"comment": "mutex block",
+					"match": "(\\^{\\$*)\\s*([a-zA-Z_][a-zA-Z0-9_]*)",
+					"captures": {
+						"1": {
+							"name": "entity.name.type.threaded.bfpp"
+						},
+						"2": {
+							"name": "entity.name.function.macro.bfpp"
+						}
+					}
+				}
+			]
+		},
+		"macros": {
+			"patterns": [
+				{
+					"comment": "&$macro_name  →  macro export",
+					"match": "(&\\$)\\s*([a-zA-Z_][a-zA-Z0-9_]*)",
+					"captures": {
+						"1": {
+							"name": "storage.type.macro.bfpp"
+						},
+						"2": {
+							"name": "entity.name.function.macro.bfpp"
+						}
+					}
+				},
+				{
+					"comment": "&macro_name, &&macro_name  →  macro definition",
+					"match": "(&&?)\\s*([a-zA-Z_][a-zA-Z0-9_]*)",
+					"captures": {
+						"1": {
+							"name": "storage.type.macro.bfpp"
+						},
+						"2": {
+							"name": "entity.name.function.macro.bfpp"
+						}
+					}
+				},
+				{
+					"comment": "$0, $$1, etc.  →  macro parameter reference",
+					"match": "(\\$+)\\s*([0-9]+)",
+					"captures": {
+						"1": {
+							"name": "storage.type.macro.bfpp"
+						},
+						"2": {
+							"name": "variable.parameter.macro.bfpp"
+						}
+					}
+				},
+				{
+					"comment": "$name  →  macro invocation",
+					"match": "(\\$+)\\s*([a-zA-Z_][a-zA-Z0-9_]*)",
+					"captures": {
+						"1": {
+							"name": "storage.type.macro.bfpp"
+						},
+						"2": {
+							"name": "entity.name.function.macro.bfpp"
+						}
+					}
+				},
+				{
+					"comment": "&*func_name, &&*func_name  →  function definition",
+					"begin": "(&&?\\*)\\s*([a-zA-Z_][a-zA-Z0-9_]*)\\s*(~)\\s*([0-9]+)\\s*(~)",
+					"beginCaptures" : {
+						"1": {
+							"name": "storage.type.macro.bfpp"
+						},
+						"2": {
+							"name": "entity.name.function.macro.bfpp"
+						},
+						"3": {
+							"name": "storage.type.macro.bfpp"
+						},
+						"4": {
+							"match": "[0-9]+",
+							"name": "constant.numeric.bfpp"
+						},
+						"5": {
+							"name": "storage.type.macro.bfpp"
+						}
+					},
+					"end": "\\(",
+					"patterns": [
+						{
+							"match": ",",
+							"name": "punctuation.separator.bfpp"
+						},
+						{
+							"match": "[0-9]+",
+							"name": "constant.numeric.bfpp"
+						}
+					]
+				},
+				{
+					"comment": "&*func_name, &&*func_name  →  function definition",
+					"match": "(&&?\\*)\\s*([a-zA-Z_][a-zA-Z0-9_]*)\\s*(~)\\s*([0-9]+)",
+					"captures" : {
+						"1": {
+							"name": "storage.type.macro.bfpp"
+						},
+						"2": {
+							"name": "entity.name.function.macro.bfpp"
+						},
+						"3": {
+							"name": "storage.type.macro.bfpp"
+						},
+						"4": {
+							"match": "[0-9]+",
+							"name": "constant.numeric.bfpp"
+						},
+						"5": {
+							"name": "storage.type.macro.bfpp"
+						}
+					}
+				},
+				{
+					"comment": "$*func_name  →  function get",
+					"match": "(\\$+\\*)\\s*([a-zA-Z_][a-zA-Z0-9_]*)",
+					"captures": {
+						"1": {
+							"name": "storage.type.macro.bfpp"
+						},
+						"2": {
+							"name": "entity.name.function.macro.bfpp"
+						}
+					}
+				},
+				{
+					"comment": "$*0, $*1, etc.  →  function parameter get",
+					"match": "(\\$\\*)\\s*([0-9]+)",
+					"captures": {
+						"1": {
+							"name": "storage.type.macro.bfpp"
+						},
+						"2": {
+							"name": "variable.parameter.macro.bfpp"
+						}
+					}
+				},
+				{
+					"comment": "$!  →  function return",
+					"match": "\\$!",
+					"name": "storage.type.macro.bfpp"
+				}
+			]
+		},
+		"for-loop": {
+			"patterns": [
+				{
+					"comment": "{n  →  for loop with explicit repeat count",
+					"match": "(\\{)\\s*([0-9]+)",
+					"captures": {
+						"1": {
+							"name": "keyword.control.for.bfpp"
+						},
+						"2": {
+							"name": "constant.numeric.bfpp"
+						}
+					}
+				},
+				{
+					"comment": "{  →  for loop (defaults to 1 iteration)",
+					"name": "keyword.control.for.bfpp",
+					"match": "\\{"
+				},
+				{
+					"comment": "}  →  end for loop",
+					"name": "keyword.control.for.bfpp",
+					"match": "\\}"
+				}
+			]
+		},
+		"bf-ops": {
+			"patterns": [
+				{
+					"comment": "Core BF singular operations: . ,",
+					"match": "[.,]",
+					"name": "keyword.operator.brainfuck.bfpp"
+				},
+				{
+					"comment": "Core BF numerable operations: + - < >",
+					"match": "([+\\-<>])\\s*([0-9]*)",
+					"captures": {
+						"1": {
+							"name": "keyword.operator.brainfuck.bfpp"
+						},
+						"2": {
+							"name": "constant.numeric.bfpp"
+						}
+					}
+				}
+			]
+			
+		},
+		"bf-control": {
+			"comment": "BF loop brackets [ ]",
+			"name": "keyword.control.loop.brainfuck.bfpp",
+			"match": "[\\[\\]]"
+		},
+		"references": {
+			"patterns": [
+				{
+					"comment": "*  →  write address of current location to tape",
+					"match": "\\*",
+					"name": "keyword.operator.reference.bfpp"
+				},
+				{
+					"comment": "~  →  read address",
+					"match": "\\~",
+					"name": "keyword.operator.reference.bfpp"
+				}
+			]
+		},
+		"wait": {
+			"match": "(!)\\s*([0-9]*)",
+			"captures": {
+				"1": {
+					"name": "keyword.operator.wait.bfpp"
+				},
+				"2": {
+					"name": "constant.numeric.bfpp"
+				}
+			}
+		}
+	}
+}
