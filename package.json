@@ -1,6 +1,6 @@
 {
     "name": "bfpp-syntax",
-    "version": "1.1.0",
+    "version": "1.1.1",
     "description": "Syntax highlighting for the Brainfuck++ (.bfpp) language.",
     "license": "GNU GPLv3",
     "author": "King_Awesome_",

@@ -233,6 +233,9 @@
 						}
 					},
 					"end": "\\(",
+					"endCaptures": {
+						"0": { "name": "keyword.control.body.bfpp" }
+					},
 					"patterns": [
 						{
 							"match": ",",
@@ -378,7 +381,7 @@
 					}
 				},
 				{
-					"match": "!.",
+					"match": "!,",
 					"name": "keyword.operator.wait.bfpp"
 				}
 			]
