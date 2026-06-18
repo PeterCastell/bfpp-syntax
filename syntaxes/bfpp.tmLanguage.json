@@ -22,10 +22,7 @@
 			"include": "#macros"
 		},
 		{
-			"include": "#for-loop"
-		},
-		{
-			"include": "#bf-control"
+			"include": "#brackets"
 		},
 		{
 			"include": "#bf-ops"
@@ -83,7 +80,7 @@
 				},
 				{
 					"comment": "@$-2, @$2, @$ → relative position assert",
-					"match": "(@\\$)\\s*(-?[0-9]+)",
+					"match": "(@\\$)\\s*(-[0-9]+|[0-9]*)",
 					"captures": {
 						"1": {
 							"name": "keyword.control.debug.bfpp"
@@ -133,7 +130,7 @@
 			"patterns": [
 				{
 					"comment": "spawn thread",
-					"match": "(\\^\\$)\\s*([a-zA-Z_][a-zA-Z0-9_]*)",
+					"match": "(\\^\\$+)\\s*([a-zA-Z_][a-zA-Z0-9_]*)",
 					"captures": {
 						"1": {
 							"name": "entity.name.type.threaded.bfpp"
@@ -150,25 +147,15 @@
 				},
 				{
 					"comment": "define mutex",
-					"match": "(\\^\\&)\\s*([a-zA-Z_][a-zA-Z0-9_]*)",
-					"captures": {
-						"1": {
-							"name": "entity.name.type.threaded.bfpp"
-						},
-						"2": {
-							"name": "entity.name.function.macro.bfpp"
-						}
-					}
+					"match": "\\^\\&",
+					"name": "entity.name.type.threaded.bfpp"
 				},
 				{
 					"comment": "mutex block",
-					"match": "(\\^{\\$*)\\s*([a-zA-Z_][a-zA-Z0-9_]*)",
+					"match": "(\\^)(?={)",
 					"captures": {
 						"1": {
 							"name": "entity.name.type.threaded.bfpp"
-						},
-						"2": {
-							"name": "entity.name.function.macro.bfpp"
 						}
 					}
 				}
@@ -310,7 +297,7 @@
 				}
 			]
 		},
-		"for-loop": {
+		"brackets": {
 			"patterns": [
 				{
 					"comment": "{n  →  for loop with explicit repeat count",
@@ -325,14 +312,19 @@
 					}
 				},
 				{
-					"comment": "{  →  for loop (defaults to 1 iteration)",
+					"comment": "for loop { }",
 					"name": "keyword.control.for.bfpp",
-					"match": "\\{"
+					"match": "{|}"
 				},
 				{
-					"comment": "}  →  end for loop",
-					"name": "keyword.control.for.bfpp",
-					"match": "\\}"
+					"comment": "while loop [ ]",
+					"name": "keyword.control.while.bfpp",
+					"match": "\\[|\\]"
+				},
+				{
+					"comment": "macro body ( )",
+					"name": "keyword.control.body.bfpp",
+					"match": "\\(|\\)"
 				}
 			]
 		},
@@ -358,11 +350,6 @@
 			]
 			
 		},
-		"bf-control": {
-			"comment": "BF loop brackets [ ]",
-			"name": "keyword.control.loop.brainfuck.bfpp",
-			"match": "[\\[\\]]"
-		},
 		"references": {
 			"patterns": [
 				{
@@ -378,15 +365,23 @@
 			]
 		},
 		"wait": {
-			"match": "(!)\\s*([0-9]*)",
-			"captures": {
-				"1": {
-					"name": "keyword.operator.wait.bfpp"
+			"patterns": [
+				{
+					"match": "(!)\\s*([0-9]*)",
+					"captures": {
+						"1": {
+							"name": "keyword.operator.wait.bfpp"
+						},
+						"2": {
+							"name": "constant.numeric.bfpp"
+						}
+					}
 				},
-				"2": {
-					"name": "constant.numeric.bfpp"
+				{
+					"match": "!.",
+					"name": "keyword.operator.wait.bfpp"
 				}
-			}
+			]
 		}
 	}
 }

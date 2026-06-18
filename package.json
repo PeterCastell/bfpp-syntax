@@ -1,53 +1,139 @@
 {
-  "name": "bfpp-syntax",
-  "version": "0.1.0",
-  "description": "Syntax highlighting for the Brainfuck++ (.bfpp) language.",
-  "license": "ISC",
-  "author": "King_Awesome_",
-  "type": "commonjs",
-  "main": "./extension.js",
-  "scripts": {},
-  "dependencies": {
-    "highlight.js": "^11.11.1",
-    "vscode-languageclient": "^9.0.0"
-  },
-  "engines": {
-    "vscode": "^1.74.0"
-  },
-  "displayName": "Brainfuck++ (.bfpp)",
-  "publisher": "king-awesome",
-  "categories": [
-    "Programming Languages"
-  ],
-  "icon": "icon.png",
-  "contributes": {
-    "languages": [
-      {
-        "id": "bfpp",
-        "aliases": [
-          "Brainfuck++",
-          "bfpp"
-        ],
-        "extensions": [
-          ".bfpp"
-        ],
-        "configuration": "./language-configuration.json"
-      }
+    "name": "bfpp-syntax",
+    "version": "1.1.0",
+    "description": "Syntax highlighting for the Brainfuck++ (.bfpp) language.",
+    "license": "ISC",
+    "author": "King_Awesome_",
+    "type": "commonjs",
+    "main": "./extension.js",
+    "scripts": {},
+    "dependencies": {
+        "shiki": "^4.2.0"
+    },
+    "engines": {
+        "vscode": "^1.74.0"
+    },
+    "displayName": "Brainfuck++ (.bfpp)",
+    "publisher": "king-awesome",
+    "categories": [
+        "Programming Languages"
     ],
-    "grammars": [
-      {
-        "language": "bfpp",
-        "scopeName": "source.bfpp",
-        "path": "./syntaxes/bfpp.tmLanguage.json"
-      }
-    ],
-    "markdown.markdownItPlugins": true,
-    "markdown.previewStyles": [
-      "./bfpp-theme.css"
+    "icon": "icon.png",
+    "contributes": {
+        "languages": [
+            {
+                "id": "bfpp",
+                "aliases": [
+                    "Brainfuck++",
+                    "bfpp"
+                ],
+                "extensions": [
+                    ".bfpp"
+                ],
+                "configuration": "./language-configuration.json"
+            }
+        ],
+        "grammars": [
+            {
+                "language": "bfpp",
+                "scopeName": "source.bfpp",
+                "path": "./syntaxes/bfpp.tmLanguage.json"
+            },
+            {
+                "scopeName": "markdown.bfpp.codeblock",
+                "path": "./syntaxes/bfpp.markdown-injection.json",
+                "injectTo": ["text.html.markdown"]
+            }
+        ],
+        "markdown.markdownItPlugins": true,
+        "taskDefinitions": [
+            {
+                "type": "bfpp",
+                "required": [],
+                "properties": {}
+            }
+        ],
+        "commands": [
+            {
+                "command": "bfpp.init",
+                "title": "Brainfuck++: Initialize Project"
+            },
+            {
+                "command": "bfpp.runFile",
+                "title": "Brainfuck++: Run Current File"
+            },
+            {
+                "command": "bfpp.setCompilerPath",
+                "title": "Brainfuck++: Set Compiler Path"
+            }
+        ],
+        "debuggers": [
+            {
+                "type": "bfpp",
+                "label": "Brainfuck++",
+                "languages": [
+                    "bfpp"
+                ],
+                "configurationAttributes": {
+                    "launch": {
+                        "properties": {
+                            "path": {
+                                "type": "string",
+                                "description": "Path to the source file or directory."
+                            }
+                        }
+                    }
+                },
+                "initialConfigurations": [
+                    {
+                        "type": "bfpp",
+                        "request": "launch",
+                        "name": "Build Project",
+                        "path": "${workspaceFolder}"
+                    },
+                    {
+                        "type": "bfpp",
+                        "request": "launch",
+                        "name": "Build Current File",
+                        "path": "${file}"
+                    }
+                ],
+                "configurationSnippets": [
+                    {
+                        "label": "Brainfuck++: Build Project",
+                        "description": "Build the entire project",
+                        "body": {
+                            "type": "bfpp",
+                            "request": "launch",
+                            "name": "Build Project",
+                            "path": "^\"\\${workspaceFolder}\""
+                        }
+                    },
+                    {
+                        "label": "Brainfuck++: Build Current File",
+                        "description": "Build the currently active .bfpp file",
+                        "body": {
+                            "type": "bfpp",
+                            "request": "launch",
+                            "name": "Build Current File",
+                            "path": "^\"\\${file}\""
+                        }
+                    }
+                ]
+            }
+        ],
+        "configuration": {
+            "title": "bfpp",
+            "properties": {
+                "bfpp.compilerPath": {
+                    "type": "string",
+                    "default": "",
+                    "description": "Path to the bfpp compiler executable. Leave blank to be prompted on the first build."
+                }
+            }
+        }
+    },
+    "activationEvents": [
+        "onStartupFinished"
     ]
-  },
-  "activationEvents": [
-    "onLanguage:bfpp",
-    "onLanguage:markdown"
-  ]
 }
