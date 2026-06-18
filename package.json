@@ -2,10 +2,11 @@
     "name": "bfpp-syntax",
     "version": "1.1.0",
     "description": "Syntax highlighting for the Brainfuck++ (.bfpp) language.",
-    "license": "ISC",
+    "license": "GNU GPLv3",
     "author": "King_Awesome_",
     "type": "commonjs",
     "main": "./extension.js",
+    "repository": "github:PeterCastell/bfpp-syntax",
     "scripts": {},
     "dependencies": {
         "shiki": "^4.2.0"
