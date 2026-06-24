@@ -2,6 +2,9 @@ const vscode = require("vscode");
 const path = require("path");
 const fs = require("fs");
 const { spawn } = require("child_process");
+const net = require("net");
+const { EventEmitter } = require("events");
+
 
 const CONFIG_KEY = "bfpp.compilerPath";
 
@@ -64,53 +67,22 @@ async function resolveCompilerPath() {
     return compilerPath;
 }
 
-// Compiler runner — streams output to a dedicated output channel
-
-let outputChannel;
-
-function getOutputChannel() {
-    if (!outputChannel) {
-        outputChannel = vscode.window.createOutputChannel("Brainfuck++");
-    }
-    return outputChannel;
-}
-
 function runCompiler(compilerPath, args, cwd) {
     return new Promise((resolve, reject) => {
-        const out = getOutputChannel();
 
         out.clear();
         out.show(true);
-        out.appendLine(`> ${path.basename(compilerPath)} ${args.join(" ")}`.trimEnd());
+        out.info(`> ${path.basename(compilerPath)} ${args.join(" ")}`.trimEnd());
 
         const LAUNCH_SIGNAL = "-Launch";
 
         const proc = spawn(compilerPath, args, { cwd });
 
-        let pendingLaunch = null;
-        let buffer = "";
-        if (args.includes("-redirectLaunch"))
-            proc.stdout.on("data", (d) => {
-                buffer += d.toString();
-                const lines = buffer.split("\n");
-                buffer = lines.pop();
-                for (const line of lines) {
-                    if (line.startsWith(LAUNCH_SIGNAL)) {
-                        pendingLaunch = JSON.parse(line.slice(LAUNCH_SIGNAL.length).trim());
-                    }
-                    else {
-                        out.appendLine(line);
-                    }
-                }
-            });
-        else
-            proc.stdout.on("data", (d) => out.append(d.toString()));
-
+        proc.stdout.on("data", (d) => out.append(d.toString()));
         proc.stderr.on("data", (d) => out.append(d.toString()));
 
         proc.on("error", (err) => {
-            out.appendLine(`\n  Failed to launch compiler: ${err.message}`);
-            out.appendLine(`   Check the path in settings: ${CONFIG_KEY}`);
+            vscode.window.showErrorMessage(`Failed to launch compiler: ${err.message}`);
             reject(err);
         });
 
@@ -118,7 +90,7 @@ function runCompiler(compilerPath, args, cwd) {
             if (code === 0) {
                 resolve({pendingLaunch: pendingLaunch});
             } else {
-                out.appendLine(`Compilation failed with exit code ${code}`);
+                vscode.window.showErrorMessage(`Compiler execution failed with exit code: ${code}`);
                 reject(new Error(`Compiler exited with code ${code}`));
             }
         });
@@ -138,7 +110,6 @@ class BfppDebugConfigurationProvider {
     }
 
     async resolveDebugConfiguration(folder, config) {
-        // No launch.json: default to "Build Project"
         if (!config.type && !config.request && !config.name) {
             config.type = "bfpp";
             config.request = "launch";
@@ -156,22 +127,14 @@ class BfppDebugConfigurationProvider {
             );
             return undefined;
         }
-        
-        try {
-            var result = await runCompiler(compilerPath, ["build", "-redirectLaunch", ...(config.path ? [config.path] : [])], cwd);
-            if (result.pendingLaunch) {
-                config._compilerOut = result;
-                config.console = "internalConsole";
-                return config;
-            }
-        } catch { /* reported to output channel */ }
+        config.compilerPath = compilerPath
+        config.cwd = cwd
 
-
-        return undefined;
+        config.console = "internalConsole";
+        return config;
     }
 }
 
-const { EventEmitter } = require("events");
 
 class BfppDebugAdapterFactory {
     createDebugAdapterDescriptor(session) {
@@ -181,59 +144,60 @@ class BfppDebugAdapterFactory {
     }
 }
 
+var ideServer;
+
 class BfppDebugAdapter {
     constructor(config) {
         this.config = config;
-        this.proc = null;
         this._onDidSendMessage = new vscode.EventEmitter();
         this.onDidSendMessage = this._onDidSendMessage.event;
+        this._seq = 1;
     }
 
     async handleMessage(message) {
-        const out = getOutputChannel();
-
         if (message.command === "initialize") {
-            // Acknowledge capabilities
-            this.send({ type: "response", request_seq: message.seq, success: true, command: "initialize", body: {} });
+            this.send({ type: "response", request_seq: message.seq, success: true, command: "initialize", body: { supportsRunInTerminalRequest: true } });
+            if (!ideServer) {
+                ideServer = new IDEServer();
+                await ideServer.ready;
+            }
             this.send({ type: "event", event: "initialized" });
 
         } else if (message.command === "launch") {
             this.send({ type: "response", request_seq: message.seq, success: true, command: "launch" });
             
-            const { exe, cwd, args } = this.config._compilerOut.pendingLaunch;
+            const args = [this.config.compilerPath, "build", `-idePort=${ideServer.port}`, ...(this.config.path ? [this.config.path] : [])]
 
-            this.proc = spawn(exe, args, { cwd });
-
-            this.proc.stdout.on("data", (d) => {
-                this.send({ type: "event", event: "output", body: { category: "stdout", output: d.toString() } });
+            const reqSeq = this._seq++;
+            this.send({
+                type: "request",
+                seq: reqSeq,
+                command: "runInTerminal",
+                arguments: {
+                    kind: "integrated",
+                    title: "Brainfuck++ Project",
+                    cwd: this.config.cwd,
+                    args
+                }
             });
 
-            this.proc.stderr.on("data", (d) => {
-                this.send({ type: "event", event: "output", body: { category: "stderr", output: d.toString() } });
-            });
-
-            this.proc.on("error", (err) => {
-                this.send({ type: "event", event: "output", body: { category: "stderr", output: `Failed to launch: ${err.message}\n` } });
+        } else if (message.type === "response" && message.command === "runInTerminal") {
+            if (!message.success) {
+                vscode.window.showErrorMessage(`Failed to launch terminal: ${message.message}\n`);
                 this.sendTerminated();
-            });
-
-            this.proc.on("close", (code) => {
-                this.send({ type: "event", event: "output", body: { category: "stdout", output: `\nProgram exited with code ${code}\n` } });
-                this.sendTerminated();
-            });
-        } else if (message.command === "evaluate") {
-            // Debug Console input — forward to the process's stdin
-            if (this.proc && !this.proc.killed) {
-                this.proc.stdin.write(message.arguments.expression + "\n");
+                return;
             }
-            this.send({ type: "response", request_seq: message.seq, success: true, command: "evaluate", body: { result: "", variablesReference: 0 } });
+            vscode.commands.executeCommand('workbench.action.terminal.focus');
+            ideServer.once("exit", () => {
+                this.sendTerminated();
+            });
+
         } else if (message.command === "disconnect" || message.command === "terminate") {
-            this.proc?.kill();
             this.send({ type: "response", request_seq: message.seq, success: true, command: message.command });
             this.sendTerminated();
+            ideServer.exit();
 
         } else {
-            // Acknowledge anything else we don't handle (threads, scopes, etc.)
             this.send({ type: "response", request_seq: message.seq, success: true, command: message.command, body: {} });
         }
     }
@@ -243,14 +207,41 @@ class BfppDebugAdapter {
     }
 
     sendTerminated() {
+        if (this._terminated) return;
+        this._terminated = true;
         this.send({ type: "event", event: "terminated" });
         this.send({ type: "event", event: "exited", body: { exitCode: 0 } });
     }
 
     dispose() {
-        this.proc?.kill();
+    }
+}
+
+class IDEServer {
+    constructor() {
+        this.ready = new Promise((res, rej) => {
+            this._internalEmitter = new EventEmitter();
+            this._emitter = new EventEmitter();
+            this._server = net.createServer((socket) => {
+                socket.on("close", () => {
+                    this._emitter.emit("exit")
+                });
+                this._internalEmitter.once("exit", () => socket.destroy());
+            });
+            this._server.listen(0, "127.0.0.1")
+            this._server.on("listening", () => {
+                this.port = this._server.address().port;
+                res();
+            });
+        });
+    }
+    once(event, listener) {
+        this._emitter.once(event, listener)
+    }
+    exit() {
+        this._internalEmitter.emit("exit")
     }
 }
 
 
-module.exports = { BfppDebugConfigurationProvider, runCompiler, resolveCompilerPath, getOutputChannel, BfppDebugAdapterFactory };
+module.exports = { BfppDebugConfigurationProvider, runCompiler, resolveCompilerPath, BfppDebugAdapterFactory };

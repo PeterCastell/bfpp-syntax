@@ -22,7 +22,7 @@
 // }
 
 const vscode = require("vscode");
-const { BfppDebugConfigurationProvider, runCompiler, resolveCompilerPath, getOutputChannel, BfppDebugAdapterFactory } = require("./bfppDebugProvider");
+const { BfppDebugConfigurationProvider, runCompiler, resolveCompilerPath, BfppDebugAdapterFactory } = require("./bfppDebugProvider");
 
 const tmGrammar = require('./syntaxes/bfpp.tmLanguage.json');
 const { createHighlighter } = require("shiki");
@@ -37,7 +37,6 @@ createHighlighter({
 })
 
 function activate(context) {
-    getOutputChannel() // creates it
 
     context.subscriptions.push(
         vscode.debug.registerDebugConfigurationProvider(
@@ -97,9 +96,13 @@ function activate(context) {
             const compilerPath = await resolveCompilerPath();
             if (!compilerPath) return;
 
-            try {
-                await runCompiler(compilerPath, ["build", filePath], cwd);
-            } catch { /* reported to output channel */ }
+            const existing = vscode.window.terminals.find(t => t.name === "Brainfuck++");
+            const terminal = existing ?? vscode.window.createTerminal({ 
+                name: "Brainfuck++", 
+                cwd 
+            });
+            terminal.show();
+            terminal.sendText(`& "${compilerPath}" "build" "${filePath}"`);
         })
     );
 
@@ -152,8 +155,6 @@ function activate(context) {
             new BfppDebugAdapterFactory()
         )
     );
-
-    context.subscriptions.push({ dispose: () => getOutputChannel().dispose() });
 
 
     return {
